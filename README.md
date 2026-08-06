@@ -148,5 +148,45 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 조회는 `LaunchedEffect(id)`를 사용해 게시글 ID가 바뀌면 다시 수행합니다.
 백스택을 되감아 상세 화면으로 돌아올 때도 화면이 새로 구성되므로 수정된 내용이 반영됩니다.
 
+에뮬레이터에서 실제 서버와 연동해 위 동작을 모두 확인했습니다.
+
+### Phase 2 — 데이터 계층 분리
+
+화면이 Retrofit 을 직접 호출하던 구조를 걷어내고 `BoardRepository`를 두었습니다.
+**사용자가 보는 동작은 달라지지 않습니다.** 이후 단계에서 ViewModel 을 도입하기 위한 준비입니다.
+
+**구조 변경**
+
+| 대상 | 변경 전 | 변경 후 |
+|---|---|---|
+| 데이터 접근 | 각 화면이 `RetrofitBuilder.getBoardService()` 를 직접 호출 | `BoardRepository` 를 거침 |
+| 모델 | `RequestBoard` 하나로 통신·화면 표시를 겸용 | `RequestBoard`(통신) / `Board`(화면) 로 분리 |
+| 모델 변환 | 없음 | `BoardRepository` 가 담당 |
+| 게시글 생성 | 화면이 의미 없는 `id = 0` 을 만들어 전달 | `create(title, content, writer)` — 화면은 id 를 다루지 않음 |
+| 게시글 수정 | 화면이 `RequestBoard` 를 새로 조립 | `board.copy(title, content)` |
+
+```
+변경 전   화면 ──────────────────────────> BoardService (Retrofit)
+변경 후   화면 ──> BoardRepository ──────> BoardService (Retrofit)
+                        │
+                   RequestBoard ↔ Board 변환
+```
+
+**얻은 것**
+
+| 항목 | 내용 |
+|---|---|
+| 화면의 책임 축소 | 화면은 Retrofit 도 통신 모델도 알지 못한다 |
+| 변경 범위 격리 | 서버 응답 형식이 바뀌어도 `BoardRepository` 만 고치면 된다 |
+| 다음 단계 준비 | ViewModel 이 `BoardRepository` 만 주입받으면 되고, 테스트에서는 가짜 구현으로 교체할 수 있다 |
+
+서버 쪽 `kotlin-board-api` 가 `BoardEntity` 와 `BoardDto` 를 분리한 것과 같은 이유입니다.
+
+**동작 변경**
+
+없습니다. 순수 구조 변경이며, 화면 흐름과 요청 횟수는 Phase 1 과 동일합니다.
+에뮬레이터에서 목록 조회 · 단건 조회 · 생성 · 수정 · 삭제 5개 흐름이
+모두 이전과 같이 동작하는 것을 확인했습니다.
+
 
 ---
