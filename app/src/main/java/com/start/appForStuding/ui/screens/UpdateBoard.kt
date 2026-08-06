@@ -28,8 +28,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-import com.start.appForStuding.server.RetrofitBuilder.getBoardService
-import com.start.appForStuding.server.request.RequestBoard
+import com.start.appForStuding.data.BoardRepository
+import com.start.appForStuding.domain.Board
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.foundation.icon.BackIcon
 import com.start.appForStuding.ui.theme.Gray
@@ -47,20 +47,20 @@ fun UpdateBoardScreen(
 ) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
-    var board by remember { mutableStateOf<RequestBoard>(RequestBoard(0, "", "", "")) }
+    var board by remember { mutableStateOf(Board(0, "", "", "")) }
     val context = LocalContext.current
 
     // LaunchedEffect : 코루틴을 실행하고 화면을 벗어나면 자동으로 취소한다.
     // DisposableEffect 는 직접 정리해야 하는 리소스를 다룰 때 쓴다.
     LaunchedEffect(id) {
         runCatching {
-            getBoardService().getBoardById(id = id)
+            BoardRepository.getBoard(id)
         }.onSuccess { result ->
             board = result
             title = result.title
             content = result.content
         }.onFailure { error ->
-            board = RequestBoard(0, "값을 못 불러왔습니다.", "", "")
+            board = Board(0, "값을 못 불러왔습니다.", "", "")
             error.printStackTrace()
         }
     }
@@ -119,15 +119,11 @@ fun UpdateBoardScreen(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 30.dp, vertical = 40.dp),
             onClick = {
-                val updatedBoard = RequestBoard(
-                    id = board.id,
-                    title = title,
-                    content = content,
-                    name = board.name
-                )
+                // 조회해 온 게시글에서 제목과 내용만 바꿔 보낸다.
+                val updatedBoard = board.copy(title = title, content = content)
                 MainScope().launch {
                     runCatching {
-                        getBoardService().updateBoard(updatedBoard)
+                        BoardRepository.update(updatedBoard)
                     }.onSuccess { _ ->
                         onMove(Navigate.READ.name)
                     }.onFailure { error ->

@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.start.appForStuding.server.RetrofitBuilder.getBoardService
-import com.start.appForStuding.server.request.RequestBoard
+import com.start.appForStuding.data.BoardRepository
+import com.start.appForStuding.domain.Board as BoardItem
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.component.Board
 import com.start.appForStuding.ui.foundation.icon.AddIcon
@@ -37,13 +37,13 @@ import com.start.appForStuding.ui.theme.White
 
 @Composable
 fun BoardListScreen(onMove: (String, id: Int?) -> Unit) {
-    var boardList by remember { mutableStateOf(listOf<RequestBoard>()) }
+    var boardList by remember { mutableStateOf(listOf<BoardItem>()) }
 
     // LaunchedEffect : 화면에 진입할 때 한 번만 실행되고, 화면을 벗어나면 자동으로 취소된다.
     // SideEffect 는 재구성마다 실행되어 불필요한 요청이 반복된다.
     LaunchedEffect(Unit) {
         runCatching {
-            getBoardService().getBoardList()
+            BoardRepository.getBoards()
         }.onSuccess { result ->
             boardList = result
         }.onFailure { error ->
@@ -81,7 +81,7 @@ fun BoardListScreen(onMove: (String, id: Int?) -> Unit) {
                     val data = boardList[index]
                     Board(
                         title = data.title,
-                        writer = data.name
+                        writer = data.writer
                     ) {
                         onMove(Navigate.READ.name, data.id)
                     }

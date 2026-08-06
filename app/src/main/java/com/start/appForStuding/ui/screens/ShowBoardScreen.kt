@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.start.appForStuding.ui.theme.Background
 import com.start.appForStuding.ui.theme.White
 
-import com.start.appForStuding.server.RetrofitBuilder.getBoardService
-import com.start.appForStuding.server.request.RequestBoard
+import com.start.appForStuding.data.BoardRepository
+import com.start.appForStuding.domain.Board
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.foundation.icon.BackIcon
 import com.start.appForStuding.ui.foundation.icon.MoreIcon
@@ -47,18 +47,18 @@ fun ShowBoardScreen(
     id: Int,
     onMove: (String) -> Unit
 ) {
-    var board by remember { mutableStateOf<RequestBoard>(RequestBoard(0, "", "", "")) }
+    var board by remember { mutableStateOf(Board(0, "", "", "")) }
     var popupMenuExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // id 가 바뀌면 다시 조회한다. SideEffect 를 쓰면 메뉴를 열고 닫을 때마다 요청이 나간다.
     LaunchedEffect(id) {
         runCatching {
-            getBoardService().getBoardById(id = id)
+            BoardRepository.getBoard(id)
         }.onSuccess { result ->
             board = result
         }.onFailure { error ->
-            board = RequestBoard(0, "값을 못 불러왔습니다.", "", "")
+            board = Board(0, "값을 못 불러왔습니다.", "", "")
             error.printStackTrace()
         }
     }
@@ -125,7 +125,7 @@ fun ShowBoardScreen(
                         onClick = {
                             MainScope().launch {
                                 runCatching {
-                                    getBoardService().deleteBoard(id)
+                                    BoardRepository.delete(id)
                                 }.onSuccess {
                                     onMove(Navigate.BOARD_LIST.name)
                                 }.onFailure { error ->
@@ -160,7 +160,7 @@ fun ShowBoardScreen(
                 color = Black
             )
             Spacer(modifier = Modifier.padding(top = 10.dp))
-            if (board.name.isNotBlank()) {
+            if (board.writer.isNotBlank()) {
                 Row {
                     Text(
                         text = "작성자:",
@@ -170,7 +170,7 @@ fun ShowBoardScreen(
                     )
                     Spacer(modifier = Modifier.padding(start = 5.dp))
                     Text(
-                        text = board.name,
+                        text = board.writer,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                         color = Gray

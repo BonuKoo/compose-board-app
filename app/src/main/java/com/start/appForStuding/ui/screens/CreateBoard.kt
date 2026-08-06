@@ -26,8 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.start.appForStuding.server.RetrofitBuilder.getBoardService
-import com.start.appForStuding.server.request.RequestBoard
+import com.start.appForStuding.data.BoardRepository
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.foundation.icon.BackIcon
 import com.start.appForStuding.ui.theme.Gray
@@ -109,15 +108,13 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
             onClick = {
                 // MainScope -> 비동기 코드를 쓸 수 있는 화면 가능
                 MainScope().launch {
-                    val requestBody = RequestBoard(
-                        id = 0,
-                        title = title,
-                        content = content,
-                        name = writer
-                    )
                     // 성공했을 때, 실패했을 때를 try-catch처럼 구성
                     runCatching {
-                        getBoardService().createBoard(requestBody)
+                        BoardRepository.create(
+                            title = title,
+                            content = content,
+                            writer = writer
+                        )
                     }.onSuccess {
                         onMove(Navigate.BOARD_LIST.name)
                     }.onFailure {
