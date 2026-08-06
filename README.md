@@ -30,7 +30,7 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 | 리포지토리 | 역할 | 기술 |
 |---|---|---|
 | **compose-board-app** (현재) | 안드로이드 클라이언트 | Kotlin, Jetpack Compose, Retrofit |
-| [kotlin-board-api](https://github.com/<your-github-id>/kotlin-board-api) | REST API 서버 | Kotlin, Spring Boot, JPA |
+| [kotlin-board-api](https://github.com/BonuKoo/kotlin-board-api) | REST API 서버 | Kotlin, Spring Boot, JPA |
 
 > 두 리포지토리는 별도로 관리되며 **HTTP/JSON 계약으로만 연결**됩니다.
 ---
