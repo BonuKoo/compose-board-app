@@ -1,7 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+// 서버 주소는 개발 환경마다 다르므로 local.properties 에서 읽는다.
+// local.properties 는 .gitignore 대상이라 리포에 올라가지 않는다.
+val serverBaseUrl: String = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}.getProperty("server.base.url") ?: "http://10.0.2.2:8080" // 에뮬레이터에서 호스트 PC를 가리키는 기본 주소
 
 android {
     namespace = "com.start.appForStuding"
@@ -19,6 +28,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SERVER_BASE_URL", "\"$serverBaseUrl\"")
     }
 
     buildTypes {
@@ -34,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

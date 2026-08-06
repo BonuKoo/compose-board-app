@@ -2,6 +2,7 @@ package com.start.appForStuding.server
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.start.appForStuding.BuildConfig
 import com.start.appForStuding.server.service.BoardService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -28,7 +29,9 @@ object RetrofitBuilder {
         if (retrofit == null){
            retrofit = Retrofit
                .Builder()
-               .baseUrl("http://192.168.0.5:8080") // 주의, localhost는 인식을 못한다.
+               // local.properties 의 server.base.url 값이 빌드 시 주입된다.
+               // 주의, localhost는 인식을 못한다.
+               .baseUrl(BuildConfig.SERVER_BASE_URL)
                .addConverterFactory(
                    GsonConverterFactory
                        .create(getGson()
