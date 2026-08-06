@@ -4,6 +4,7 @@ package com.start.appForStuding.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +16,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,16 +51,15 @@ fun ShowBoardScreen(
     var popupMenuExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    SideEffect {
-        MainScope().launch {
-            runCatching {
-                getBoardService().getBoardById(id = id)
-            }.onSuccess { result ->
-                board = result
-            }.onFailure { error ->
-                board = RequestBoard(0, "값을 못 불러왔습니다.", "", "")
-                error.printStackTrace()
-            }
+    // id 가 바뀌면 다시 조회한다. SideEffect 를 쓰면 메뉴를 열고 닫을 때마다 요청이 나간다.
+    LaunchedEffect(id) {
+        runCatching {
+            getBoardService().getBoardById(id = id)
+        }.onSuccess { result ->
+            board = result
+        }.onFailure { error ->
+            board = RequestBoard(0, "값을 못 불러왔습니다.", "", "")
+            error.printStackTrace()
         }
     }
 
@@ -80,12 +80,16 @@ fun ShowBoardScreen(
             ) {
                 BackIcon(descriptor = "뒤로가기")
             }
-            IconButton(
-                onClick = {
-                    popupMenuExpanded = true
+            // DropdownMenu 는 IconButton 의 content 슬롯이 아니라 형제로 두어야
+            // 48dp 고정 크기 컨테이너에 갇히지 않고 올바른 위치에 열린다.
+            Box {
+                IconButton(
+                    onClick = {
+                        popupMenuExpanded = true
+                    }
+                ) {
+                    MoreIcon(descriptor = "더보기")
                 }
-            ) {
-                MoreIcon(descriptor = "더보기")
                 DropdownMenu(
                     expanded = popupMenuExpanded,
                     onDismissRequest = {

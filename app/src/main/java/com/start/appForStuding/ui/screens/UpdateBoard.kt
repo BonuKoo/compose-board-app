@@ -15,7 +15,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,10 +36,7 @@ import com.start.appForStuding.ui.theme.Gray
 import com.start.appForStuding.ui.theme.Purple40
 import com.start.appForStuding.ui.theme.White
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 
@@ -53,24 +50,18 @@ fun UpdateBoardScreen(
     var board by remember { mutableStateOf<RequestBoard>(RequestBoard(0, "", "", "")) }
     val context = LocalContext.current
 
-    // DisposableEffect : 화면 최초로 호출되는 함수  <-> SideEffect : 컴포넌트 들이 변경사항이 있어서 재 호출 될 때
-    DisposableEffect(Unit) {
-        val scope = CoroutineScope(Dispatchers.Default)
-        scope.launch {
-            runCatching {
-                getBoardService().getBoardById(id = id)
-            }.onSuccess { result ->
-                board = result
-                title = result.title
-                content = result.content
-            }.onFailure { error ->
-                board = RequestBoard(0, "값을 못 불러왔습니다.", "", "")
-                error.printStackTrace()
-            }
-        }
-
-        onDispose {
-            scope.cancel()
+    // LaunchedEffect : 코루틴을 실행하고 화면을 벗어나면 자동으로 취소한다.
+    // DisposableEffect 는 직접 정리해야 하는 리소스를 다룰 때 쓴다.
+    LaunchedEffect(id) {
+        runCatching {
+            getBoardService().getBoardById(id = id)
+        }.onSuccess { result ->
+            board = result
+            title = result.title
+            content = result.content
+        }.onFailure { error ->
+            board = RequestBoard(0, "값을 못 불러왔습니다.", "", "")
+            error.printStackTrace()
         }
     }
 
@@ -87,7 +78,7 @@ fun UpdateBoardScreen(
             ) {
                 Text(
                     modifier = Modifier.align(Alignment.Center),
-                    text = "게시글 생성",
+                    text = "게시글 수정",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )

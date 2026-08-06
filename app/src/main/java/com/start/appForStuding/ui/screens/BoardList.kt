@@ -13,7 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,23 +33,21 @@ import com.start.appForStuding.ui.theme.Background
 import com.start.appForStuding.ui.theme.Black
 import com.start.appForStuding.ui.theme.Purple40
 import com.start.appForStuding.ui.theme.White
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 
 
 @Composable
 fun BoardListScreen(onMove: (String, id: Int?) -> Unit) {
     var boardList by remember { mutableStateOf(listOf<RequestBoard>()) }
 
-    SideEffect {
-        MainScope().launch {
-            runCatching {
-                getBoardService().getBoardList()
-            }.onSuccess { result ->
-                boardList = result
-            }.onFailure { error ->
-                error.printStackTrace()
-            }
+    // LaunchedEffect : 화면에 진입할 때 한 번만 실행되고, 화면을 벗어나면 자동으로 취소된다.
+    // SideEffect 는 재구성마다 실행되어 불필요한 요청이 반복된다.
+    LaunchedEffect(Unit) {
+        runCatching {
+            getBoardService().getBoardList()
+        }.onSuccess { result ->
+            boardList = result
+        }.onFailure { error ->
+            error.printStackTrace()
         }
     }
 
