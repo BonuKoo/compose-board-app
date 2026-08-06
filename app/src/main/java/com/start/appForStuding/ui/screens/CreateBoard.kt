@@ -15,10 +15,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,22 +22,52 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.start.appForStuding.data.BoardRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.foundation.icon.BackIcon
 import com.start.appForStuding.ui.theme.Gray
 import com.start.appForStuding.ui.theme.Purple40
 import com.start.appForStuding.ui.theme.White
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 
 @Composable
-fun CreateBoardScreen(onMove: (String) -> Unit) {
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
-    var writer by remember { mutableStateOf("") }
+fun CreateBoardScreen(
+    viewModel: CreateBoardViewModel = viewModel(),
+    onMove: (String) -> Unit
+) {
     val context = LocalContext.current
 
+    CreateBoardContent(
+        title = viewModel.title,
+        content = viewModel.content,
+        writer = viewModel.writer,
+        isSubmitting = viewModel.isSubmitting,
+        onTitleChange = viewModel::onTitleChange,
+        onContentChange = viewModel::onContentChange,
+        onWriterChange = viewModel::onWriterChange,
+        onSubmit = {
+            viewModel.submit(
+                onCreated = { onMove(Navigate.BOARD_LIST.name) },
+                onFailed = {
+                    Toast.makeText(context, "게시글 등록 실패", Toast.LENGTH_SHORT).show()
+                }
+            )
+        },
+        onBack = { onMove(Navigate.BOARD_LIST.name) }
+    )
+}
+
+@Composable
+private fun CreateBoardContent(
+    title: String,
+    content: String,
+    writer: String,
+    isSubmitting: Boolean,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    onWriterChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onBack: () -> Unit
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier,
@@ -62,9 +88,7 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
 
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterStart),
-                    onClick = {
-                        onMove(Navigate.BOARD_LIST.name)
-                    }
+                    onClick = onBack
                 ) {
                     BackIcon(descriptor = "뒤로가기")
                 }
@@ -75,7 +99,7 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 30.dp),
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = onTitleChange,
                 label = { Text(text = "제목") },
                 singleLine = true
             )
@@ -85,7 +109,7 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 30.dp),
                 value = content,
-                onValueChange = { content = it },
+                onValueChange = onContentChange,
                 label = { Text(text = "내용") },
                 singleLine = true
             )
@@ -95,7 +119,7 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 30.dp),
                 value = writer,
-                onValueChange = { writer = it },
+                onValueChange = onWriterChange,
                 label = { Text(text = "작성자") },
                 singleLine = true
             )
@@ -105,25 +129,9 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 30.dp, vertical = 40.dp),
-            onClick = {
-                // MainScope -> 비동기 코드를 쓸 수 있는 화면 가능
-                MainScope().launch {
-                    // 성공했을 때, 실패했을 때를 try-catch처럼 구성
-                    runCatching {
-                        BoardRepository.create(
-                            title = title,
-                            content = content,
-                            writer = writer
-                        )
-                    }.onSuccess {
-                        onMove(Navigate.BOARD_LIST.name)
-                    }.onFailure {
-                        //Toast : 알림창이라고 생각하면 편하다.
-                        Toast.makeText(context, "게시글 등록 실패", Toast.LENGTH_SHORT).show()
-                        it.printStackTrace()
-                    }
-                }
-            },
+            // 전송 중에는 눌리지 않는다. 연타로 게시글이 여러 개 만들어지던 문제를 막는다.
+            enabled = !isSubmitting,
+            onClick = onSubmit,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Purple40,
                 contentColor = White,
@@ -134,7 +142,7 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
         ) {
             Text(
                 modifier = Modifier,
-                text = "게시글 등록",
+                text = if (isSubmitting) "등록 중..." else "게시글 등록",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = White
@@ -144,9 +152,23 @@ fun CreateBoardScreen(onMove: (String) -> Unit) {
 }
 
 @Composable
-@Preview(showBackground = true)
-fun CreateBoardScreenPreview() {
-    CreateBoardScreen() {
+@Preview(showBackground = true, name = "작성")
+private fun CreateBoardPreview() {
+    CreateBoardContent(
+        title = "제목입니다", content = "내용입니다", writer = "작성자",
+        isSubmitting = false,
+        onTitleChange = {}, onContentChange = {}, onWriterChange = {},
+        onSubmit = {}, onBack = {}
+    )
+}
 
-    }
+@Composable
+@Preview(showBackground = true, name = "등록 중")
+private fun CreateBoardSubmittingPreview() {
+    CreateBoardContent(
+        title = "제목입니다", content = "내용입니다", writer = "작성자",
+        isSubmitting = true,
+        onTitleChange = {}, onContentChange = {}, onWriterChange = {},
+        onSubmit = {}, onBack = {}
+    )
 }
