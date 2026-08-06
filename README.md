@@ -240,5 +240,20 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 게시글 ID 를 화면 간에 `rememberSaveable` 로 넘기는 방식은 임시 방편입니다.
 Navigation 인자로 전달하는 것이 정석이며 다음 단계에서 정리합니다.
 
+### 부가 정리 — 프로젝트 식별자
+
+프로젝트 생성 당시의 임시 이름과 오타가 그대로 남아 있어 정리했습니다.
+
+| 항목 | 변경 전 | 변경 후 |
+|---|---|---|
+| `applicationId` · `namespace` | `com.start.appForStuding` (Studying 오타) | `com.bonukoo.board` |
+| 소스 디렉터리 | `com/start/appForStuding` | `com/bonukoo/board` |
+| `rootProject.name` | `my_project` | `compose-board-app` |
+| 앱 표시 이름 | `my_project` | `게시판` |
+| 테마 | `Theme.My_project` · `My_projectTheme` | `Theme.Board` · `BoardTheme` |
+
+`applicationId` 는 스토어에서 앱을 식별하는 값이라 출시 후에는 바꿀 수 없습니다.
+미출시 상태인 지금 정리했습니다.
+
 
 ---
