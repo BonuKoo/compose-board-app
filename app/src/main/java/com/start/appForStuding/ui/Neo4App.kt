@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -26,7 +27,9 @@ enum class Navigate(){
 @Composable
 fun Neo4App(innerPadding: PaddingValues) {
     val navController = rememberNavController()
-    var id by remember { mutableIntStateOf(0) }
+    // rememberSaveable : 화면 회전으로 액티비티가 다시 만들어져도 살아남는다.
+    // remember 였을 때는 회전하면 id 가 0 이 되어 상세·수정 화면이 조회에 실패했다.
+    var id by rememberSaveable { mutableIntStateOf(0) }
 
     /**
      * 이미 백스택에 있는 화면이면 새로 쌓지 않고 그 화면까지 되돌아간다.
