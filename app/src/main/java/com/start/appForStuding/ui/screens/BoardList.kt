@@ -10,47 +10,64 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.start.appForStuding.data.BoardRepository
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.start.appForStuding.domain.Board as BoardItem
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.component.Board
 import com.start.appForStuding.ui.foundation.icon.AddIcon
 import com.start.appForStuding.ui.theme.Background
 import com.start.appForStuding.ui.theme.Black
+import com.start.appForStuding.ui.theme.Gray
 import com.start.appForStuding.ui.theme.Purple40
 import com.start.appForStuding.ui.theme.White
 
-
+/**
+ * 상태를 ViewModel 에서 받아 화면에 연결한다.
+ * 실제로 그리는 일은 BoardListContent 가 맡는다.
+ */
 @Composable
-fun BoardListScreen(onMove: (String, id: Int?) -> Unit) {
-    var boardList by remember { mutableStateOf(listOf<BoardItem>()) }
+fun BoardListScreen(
+    viewModel: BoardListViewModel = viewModel(),
+    onMove: (String, id: Int?) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // LaunchedEffect : 화면에 진입할 때 한 번만 실행되고, 화면을 벗어나면 자동으로 취소된다.
-    // SideEffect 는 재구성마다 실행되어 불필요한 요청이 반복된다.
+    // 화면에 들어올 때마다 다시 불러온다.
+    // 글을 쓰거나 지우고 돌아왔을 때 최신 목록이 보이게 한다.
     LaunchedEffect(Unit) {
-        runCatching {
-            BoardRepository.getBoards()
-        }.onSuccess { result ->
-            boardList = result
-        }.onFailure { error ->
-            error.printStackTrace()
-        }
+        viewModel.load()
     }
 
+    BoardListContent(
+        uiState = uiState,
+        onRetry = viewModel::load,
+        onMove = onMove
+    )
+}
+
+/**
+ * 상태만 받아서 그리는 화면. ViewModel 을 모르므로 Preview 에서도 그대로 쓸 수 있다.
+ */
+@Composable
+private fun BoardListContent(
+    uiState: BoardListUiState,
+    onRetry: () -> Unit,
+    onMove: (String, id: Int?) -> Unit
+) {
     Box(
         modifier = Modifier
             .background(Background)
@@ -74,18 +91,54 @@ fun BoardListScreen(onMove: (String, id: Int?) -> Unit) {
                 )
             }
             Spacer(modifier = Modifier.padding(top = 5.dp))
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                items(boardList.size) { index ->
-                    val data = boardList[index]
-                    Board(
-                        title = data.title,
-                        writer = data.writer
-                    ) {
-                        onMove(Navigate.READ.name, data.id)
+
+            when (uiState) {
+                is BoardListUiState.Loading -> CenterMessage {
+                    CircularProgressIndicator(color = Purple40)
+                }
+
+                is BoardListUiState.Error -> CenterMessage {
+                    Text(
+                        text = uiState.message,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Gray
+                    )
+                    TextButton(onClick = onRetry) {
+                        Text(
+                            text = "다시 시도",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Purple40
+                        )
                     }
                 }
+
+                is BoardListUiState.Success ->
+                    if (uiState.boards.isEmpty()) {
+                        CenterMessage {
+                            Text(
+                                text = "아직 게시글이 없습니다.",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Gray
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            items(uiState.boards.size) { index ->
+                                val data = uiState.boards[index]
+                                Board(
+                                    title = data.title,
+                                    writer = data.writer
+                                ) {
+                                    onMove(Navigate.READ.name, data.id)
+                                }
+                            }
+                        }
+                    }
             }
         }
         FloatingActionButton(
@@ -108,8 +161,59 @@ fun BoardListScreen(onMove: (String, id: Int?) -> Unit) {
     }
 }
 
+/** 목록 대신 보여 줄 안내를 화면 가운데에 배치한다. */
 @Composable
-@Preview(showBackground = true)
-fun BoardListScreenPreview() {
-    BoardListScreen() { _, _ -> }
+private fun CenterMessage(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+@Preview(showBackground = true, name = "목록")
+private fun BoardListSuccessPreview() {
+    BoardListContent(
+        uiState = BoardListUiState.Success(
+            listOf(
+                BoardItem(1, "첫 게시글", "내용 A", "홍길동"),
+                BoardItem(2, "두 번째 글", "내용 B", "김철수"),
+            )
+        ),
+        onRetry = {},
+        onMove = { _, _ -> }
+    )
+}
+
+@Composable
+@Preview(showBackground = true, name = "불러오는 중")
+private fun BoardListLoadingPreview() {
+    BoardListContent(uiState = BoardListUiState.Loading, onRetry = {}, onMove = { _, _ -> })
+}
+
+@Composable
+@Preview(showBackground = true, name = "비어 있음")
+private fun BoardListEmptyPreview() {
+    BoardListContent(
+        uiState = BoardListUiState.Success(emptyList()),
+        onRetry = {},
+        onMove = { _, _ -> }
+    )
+}
+
+@Composable
+@Preview(showBackground = true, name = "오류")
+private fun BoardListErrorPreview() {
+    BoardListContent(
+        uiState = BoardListUiState.Error("게시글을 불러오지 못했습니다."),
+        onRetry = {},
+        onMove = { _, _ -> }
+    )
 }
