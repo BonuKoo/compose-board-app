@@ -178,7 +178,7 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 |---|---|
 | 화면의 책임 축소 | 화면은 Retrofit 도 통신 모델도 알지 못한다 |
 | 변경 범위 격리 | 서버 응답 형식이 바뀌어도 `BoardRepository` 만 고치면 된다 |
-| 다음 단계 준비 | ViewModel 이 `BoardRepository` 만 주입받으면 되고, 테스트에서는 가짜 구현으로 교체할 수 있다 |
+| 다음 단계 준비 | ViewModel 이 `BoardRepository` 만 알면 되는 형태로 정리됨 (실제 주입은 Phase 5 에서) |
 
 서버 쪽 `kotlin-board-api` 가 `BoardEntity` 와 `BoardDto` 를 분리한 것과 같은 이유입니다.
 
@@ -254,6 +254,60 @@ Navigation 인자로 전달하는 것이 정석이며 다음 단계에서 정리
 
 `applicationId` 는 스토어에서 앱을 식별하는 값이라 출시 후에는 바꿀 수 없습니다.
 미출시 상태인 지금 정리했습니다.
+
+### Phase 5 — 의존성 주입과 단위 테스트
+
+Phase 2·3 에서 계층은 나눴지만 `BoardRepository` 가 싱글턴 `object` 였고
+ViewModel 이 그것을 직접 불렀습니다. 구조는 나뉘었으나 **바꿔 끼울 수는 없는 상태**여서
+테스트에 실제 서버가 필요했습니다. 그 마지막 연결을 끊었습니다.
+
+**구조 변경**
+
+| 대상 | 변경 전 | 변경 후 |
+|---|---|---|
+| `BoardRepository` | 싱글턴 `object` | `interface` + `RemoteBoardRepository` 구현 |
+| ViewModel 의 의존성 | 싱글턴을 직접 호출 | 생성자로 `BoardRepository` 를 받음 |
+| ViewModel 생성 | `viewModel()` | `viewModelFactory` 로 구현을 주입 |
+| 조립 위치 | 흩어져 있음 | `AppContainer` 한 곳 |
+
+```
+화면 ──> ViewModel(BoardRepository) ──> RemoteBoardRepository ──> Retrofit
+                     ↑
+              테스트에서는 FakeBoardRepository
+```
+
+**테스트**
+
+`BoardRepository` 가 인터페이스가 되면서 서버 없이 ViewModel 을 검증할 수 있게 됐습니다.
+
+| 대상 | 개수 | 확인하는 것 |
+|---|---|---|
+| `BoardListViewModelTest` | 6 | 로딩 · 성공 · 빈 목록 · 실패 · 재시도 복구 · 재조회 시 깜빡임 없음 |
+| `CreateBoardViewModelTest` | 4 | 입력 반영 · 등록 성공 · **연타 시 1회만 전송** · 실패 후 재시도 |
+| `UpdateBoardViewModelTest` | 5 | 값 채움 · 조회 실패 시 저장 차단 · 제목·내용만 변경 · 재조회 시 입력 보존 |
+
+**테스트가 잡아낸 결함**
+
+연타 방지가 코루틴 디스패처에 의존하고 있었습니다.
+
+```kotlin
+// 변경 전 — 코루틴 안에서 잠근다
+if (isSubmitting) return
+viewModelScope.launch { isSubmitting = true; ... }
+
+// 변경 후 — 예약하기 전에 잠근다
+if (isSubmitting) return
+isSubmitting = true
+viewModelScope.launch { ... }
+```
+
+코루틴이 즉시 시작되는 환경에서는 우연히 동작했지만, 시작이 지연되면
+가드가 열린 채로 남아 연타가 그대로 통과합니다. 실기기에서는 드러나지 않았고
+단위 테스트에서 처음 잡혔습니다.
+
+**동작 변경**
+
+사용자가 보는 동작은 그대로입니다. 연타 방지만 환경에 관계없이 확실해졌습니다.
 
 
 ---
