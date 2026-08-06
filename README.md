@@ -156,7 +156,12 @@ server.base.url=http://192.168.0.10:8080
 - **부수효과의 수명** — 조회는 `LaunchedEffect`, 통신은 `viewModelScope`에서 실행해 화면을 벗어나면 자동으로 취소됩니다.
 - **환경 의존 값의 외부화** — 서버 주소를 소스에서 분리해 네트워크가 바뀌어도 재빌드가 필요 없습니다.
 
-작업 과정에서 찾아 고친 버그와 리팩터링 기록은 [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md)에 정리해 두었습니다.
+---
+
+## 개선 이력
+
+계층을 나누는 과정에서 찾아 고친 버그와 구조 변경 기록은
+[docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md)에 별도로 정리해 두었습니다.
 
 ---
 
