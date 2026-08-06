@@ -1,7 +1,7 @@
 # compose-board-app
 
-Jetpack Compose로 구현한 게시판 안드로이드 앱입니다.
-Kotlin + Spring Boot API 서버([kotlin-board-api](#연동-프로젝트))와 연동됩니다.
+Jetpack Compose로 만든 게시판 안드로이드 앱.
+[kotlin-board-api](https://github.com/BonuKoo/kotlin-board-api) 서버와 HTTP로 연동합니다.
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.02.01-4285F4?logo=jetpackcompose&logoColor=white)
@@ -9,53 +9,24 @@ Kotlin + Spring Boot API 서버([kotlin-board-api](#연동-프로젝트))와 연
 ![Retrofit](https://img.shields.io/badge/Retrofit-3.0.0-48B983)
 ![Gradle](https://img.shields.io/badge/Gradle-9.4.1-02303A?logo=gradle&logoColor=white)
 
----
-
-## 화면
-
 | 목록 | 상세 | 수정 |
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/list.png" width="240"> | <img src="docs/screenshots/detail.png" width="240"> | <img src="docs/screenshots/edit.png" width="240"> |
 
-### 상태 처리
-
-불러오는 중 · 게시글 없음 · 요청 실패를 각각 구분해 표시합니다.
-실패했을 때는 「다시 시도」로 복구할 수 있습니다.
+불러오는 중 · 게시글 없음 · 요청 실패를 각각 구분해 표시하고, 실패 시 재시도할 수 있습니다.
 
 | 불러오는 중 | 게시글 없음 | 요청 실패 |
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/list-loading.png" width="240"> | <img src="docs/screenshots/list-empty.png" width="240"> | <img src="docs/screenshots/list-error.png" width="240"> |
 
-### 동작
-
-게시글을 삭제하면 목록으로 돌아오면서 자동으로 갱신됩니다.
-
 <img src="docs/screenshots/flow.gif" width="260">
 
 ---
 
-## 프로젝트 소개
+## 기능
 
-게시글의 생성·조회·수정·삭제(CRUD)를 제공하는 안드로이드 클라이언트입니다.
-Compose로 UI를 선언적으로 구성하고, Navigation Compose로 화면을 전환하며,
-Retrofit을 통해 REST API 서버와 통신합니다.
+게시글 생성 · 목록 조회 · 단건 조회 · 수정 · 삭제
 
-**주요 관심사**
-
-- Compose 선언형 UI와 상태 기반 화면 구성
-- Navigation Compose를 이용한 화면 전환과 상태 호이스팅
-- Retrofit `suspend` 함수를 통한 비동기 HTTP 통신
-
----
-
-## 연동 프로젝트
-
-| 리포지토리 | 역할 | 기술 |
-|---|---|---|
-| **compose-board-app** (현재) | 안드로이드 클라이언트 | Kotlin, Jetpack Compose, Retrofit |
-| [kotlin-board-api](https://github.com/BonuKoo/kotlin-board-api) | REST API 서버 | Kotlin, Spring Boot, JPA |
-
-> 두 리포지토리는 별도로 관리되며 **HTTP/JSON 계약으로만 연결**됩니다.
 ---
 
 ## 기술 스택
@@ -65,272 +36,132 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 | 언어 | Kotlin 2.2.10 |
 | UI | Jetpack Compose (BOM 2026.02.01), Material 3 |
 | 화면 전환 | Navigation Compose 2.9.2 |
+| 상태 관리 | ViewModel, StateFlow |
 | 네트워크 | Retrofit 3.0.0, Gson Converter 2.9.0 |
 | 비동기 | Kotlin Coroutines |
+| 테스트 | JUnit 4, kotlinx-coroutines-test |
 | 빌드 | Gradle 9.4.1, AGP 9.2.1 |
 | 지원 SDK | minSdk 24 / targetSdk 36 |
 
 ---
 
-## 화면 구성
+## 구조
+
+```
+ui/screens ──> ViewModel ──> BoardRepository ──> BoardService (Retrofit)
+                  │                 │
+             BoardListUiState   RequestBoard ↔ Board
+```
+
+화면은 그리는 일만 하고, 상태는 `ViewModel`이 보관합니다.
+`BoardRepository`는 인터페이스이므로 테스트에서는 가짜 구현으로 바꿔 끼웁니다.
+
+```
+com.bonukoo.board
+├── MainActivity.kt
+├── di/AppContainer.kt              앱이 쓸 구현을 조립
+├── domain/Board.kt                 화면용 모델
+├── data/
+│   ├── BoardRepository.kt          인터페이스
+│   └── RemoteBoardRepository.kt    Retrofit 구현
+├── server/                         Retrofit 정의와 통신 모델
+└── ui/
+    ├── BoardApp.kt                 NavHost 구성
+    ├── component/ foundation/ theme/
+    └── screens/                    화면 + ViewModel + UiState
+```
 
 | 구성 요소 | 책임 |
 |---|---|
-| `MainActivity` | 앱 진입점, Compose 트리 및 테마 설정 |
-| `BoardApp` | `NavHost` 구성, 화면 간 라우팅과 게시글 ID 전달 |
-| `BoardListScreen` | 게시글 목록 조회 및 표시 |
-| `ShowBoardScreen` | 게시글 단건 조회, 수정·삭제 메뉴 |
-| `CreateBoardScreen` | 게시글 작성 폼 |
-| `UpdateBoardScreen` | 게시글 수정 폼 |
-| `Board` | 목록 아이템 컴포넌트 |
+| `BoardApp` | `NavHost` 구성, 화면 간 라우팅 |
+| `BoardListScreen` | 목록 조회 및 표시 |
+| `ShowBoardScreen` | 단건 조회, 수정·삭제 메뉴 |
+| `CreateBoardScreen` | 작성 폼 |
+| `UpdateBoardScreen` | 수정 폼 |
 
-화면 경로는 `Navigate` enum으로 관리합니다 — `BOARD_LIST`, `READ`, `CREATE`, `UPDATE`
+화면 상태는 `sealed interface`로 표현합니다.
+
+```kotlin
+sealed interface BoardListUiState {
+    data object Loading : BoardListUiState
+    data class Success(val boards: List<Board>) : BoardListUiState
+    data class Error(val message: String) : BoardListUiState
+}
+```
 
 ---
 
 ## 서버 연동
 
-`RetrofitBuilder`가 Retrofit 인스턴스와 `BoardService`를 제공하며,
-모든 통신 메서드는 코루틴 `suspend` 함수로 선언되어 있습니다.
+`BoardService`의 메서드는 모두 코루틴 `suspend` 함수입니다.
 
-| BoardService | Method | Endpoint | 설명 |
-|---|---|---|---|
-| `createBoard` | `POST` | `/board` | 게시글 생성 |
-| `getBoardList` | `GET` | `/board` | 전체 조회 |
-| `getBoardById` | `GET` | `/board/{id}` | 단건 조회 |
-| `updateBoard` | `PATCH` | `/board` | 게시글 수정 |
-| `deleteBoard` | `DELETE` | `/board/{id}` | 게시글 삭제 |
-
-### RequestBoard
-
-서버의 `BoardDto`와 필드가 1:1로 대응하며, Gson이 JSON을 변환합니다.
-
-| 필드 | 타입 | 설명 |
+| BoardService | Method | Endpoint |
 |---|---|---|
-| `id` | `Int` | 게시글 ID |
-| `title` | `String` | 제목 |
-| `content` | `String` | 내용 |
-| `name` | `String` | 작성자 |
+| `createBoard` | `POST` | `/board` |
+| `getBoardList` | `GET` | `/board` |
+| `getBoardById` | `GET` | `/board/{id}` |
+| `updateBoard` | `PATCH` | `/board` |
+| `deleteBoard` | `DELETE` | `/board/{id}` |
+
+통신 모델 `RequestBoard`는 서버의 `BoardDto`와 필드가 1:1로 대응하고,
+화면용 모델 `Board`로의 변환은 `RemoteBoardRepository`가 맡습니다.
+
+| RequestBoard | Board | 타입 |
+|---|---|---|
+| `id` | `id` | `Int` |
+| `title` | `title` | `String` |
+| `content` | `content` | `String` |
+| `name` | `writer` | `String` |
 
 ---
 
-### 실행 설정
+## 실행
 
-| 항목 | 위치 |
-|---|---|
-| 서버 주소 | `local.properties` · `server.base.url` |
-| 인터넷 권한 | `AndroidManifest.xml` · `android.permission.INTERNET` |
-| 평문 HTTP 허용 | `AndroidManifest.xml` · `usesCleartextTraffic="true"` |
+서버 주소는 `local.properties`에서 읽어 `BuildConfig.SERVER_BASE_URL`로 주입됩니다.
+이 파일은 버전 관리에서 제외되므로 개발 환경마다 값을 따로 둡니다.
 
+```properties
+server.base.url=http://192.168.0.10:8080
+```
 
-> **서버 주소 설정**
-> 에뮬레이터·실기기는 `localhost`를 인식하지 못합니다.
-> `local.properties`에 서버가 실행 중인 PC의 **LAN IP**를 지정하고,
-> 서버 PC의 방화벽에서 8080 포트 인바운드를 허용해야 합니다.
-> 이 파일은 버전 관리에서 제외되므로 개발 환경마다 값을 따로 둡니다.
-> 값이 없으면 에뮬레이터 기본 주소(`http://10.0.2.2:8080`)를 사용합니다.
->
-> `server.base.url=http://???.???.?.?:8080`
+값이 없으면 에뮬레이터 기본 주소 `http://10.0.2.2:8080`을 사용합니다.
+실기기·에뮬레이터는 `localhost`를 인식하지 못하므로 서버가 실행 중인 PC의 LAN IP를 지정하고,
+그 PC의 방화벽에서 8080 포트 인바운드를 허용해야 합니다.
 
-값은 빌드 시 `BuildConfig.SERVER_BASE_URL`로 주입되어 `RetrofitBuilder`가 읽습니다.
-
+평문 HTTP 통신을 위해 `AndroidManifest.xml`에 `usesCleartextTraffic="true"`가 설정되어 있습니다.
 
 ---
 
-## 개선 이력
+## 테스트
 
-- 부수효과
-- 네비게이션
-**수정한 버그**
-
-| 증상 | 원인 | 해결 |
-|---|---|---|
-| 화면 진입 시 조회 요청이 2회 발생. 상세 화면은 더보기 메뉴를 여닫을 때마다 요청이 추가로 발생 | `SideEffect`는 재구성이 일어날 때마다 실행된다 | `LaunchedEffect`로 교체. 진입 시 한 번만 실행되고 화면을 벗어나면 자동 취소된다 |
-| 게시글을 삭제한 뒤 시스템 뒤로가기를 누르면 삭제된 글의 상세 화면으로 이동 (서버 500) | 뒤로가기까지 `navigate()`로 처리해 백스택에 화면이 계속 쌓였다 | 백스택에 이미 있는 경로면 `popBackStack`으로 되돌아가도록 변경 |
-| 게시글 수정 화면 상단에 "게시글 생성"이 표시됨 | 생성 화면을 복사하며 남은 흔적 | "게시글 수정"으로 수정 |
-| 더보기 메뉴가 의도한 위치에서 벗어나 열림 | `DropdownMenu`가 48dp 고정 크기인 `IconButton`의 content 슬롯 안에 있었다 | `Box`의 형제로 배치 |
-| 개발 PC의 LAN IP가 바뀌면 모든 요청이 실패하고, 앱을 다시 빌드해야 복구됨 | `baseUrl`이 소스에 하드코딩되어 있었다 | `local.properties` 값을 `BuildConfig`로 주입 |
-
-**구조 변경**
-
-| 대상 | 변경 전 | 변경 후 |
-|---|---|---|
-| 데이터 로딩 | `SideEffect` / `DisposableEffect` 혼용 | `LaunchedEffect`로 통일 |
-| 화면 전환 | 각 화면의 콜백이 `navController.navigate()`를 그대로 호출 | `BoardApp.moveTo()` 한 곳으로 집약 |
-| 서버 주소 | `RetrofitBuilder` 내 문자열 상수 | `local.properties` → `BuildConfig.SERVER_BASE_URL` |
-
-**동작 변경**
-
-| 상황 | 변경 전 | 변경 후 |
-|---|---|---|
-| 목록 화면 진입 | GET `/board` 2회 | 1회 |
-| 상세 화면에서 메뉴 열기 | 열 때마다 GET `/board/{id}` 추가 발생 | 요청 없음 |
-| 게시글 삭제 후 뒤로가기 | 삭제된 글의 상세 화면 (오류 표시) | 앱 종료 |
-| 수정 완료 후 상세 화면 복귀 | 새 화면을 쌓으며 재조회 | 백스택을 되감으며 재조회 (결과 동일, 스택은 정리됨) |
-
-조회는 `LaunchedEffect(id)`를 사용해 게시글 ID가 바뀌면 다시 수행합니다.
-백스택을 되감아 상세 화면으로 돌아올 때도 화면이 새로 구성되므로 수정된 내용이 반영됩니다.
-
-에뮬레이터에서 실제 서버와 연동해 위 동작을 모두 확인했습니다.
-
-### Phase 2 — 데이터 계층 분리
-
-화면이 Retrofit 을 직접 호출하던 구조를 걷어내고 `BoardRepository`를 두었습니다.
-**사용자가 보는 동작은 달라지지 않습니다.** 이후 단계에서 ViewModel 을 도입하기 위한 준비입니다.
-
-**구조 변경**
-
-| 대상 | 변경 전 | 변경 후 |
-|---|---|---|
-| 데이터 접근 | 각 화면이 `RetrofitBuilder.getBoardService()` 를 직접 호출 | `BoardRepository` 를 거침 |
-| 모델 | `RequestBoard` 하나로 통신·화면 표시를 겸용 | `RequestBoard`(통신) / `Board`(화면) 로 분리 |
-| 모델 변환 | 없음 | `BoardRepository` 가 담당 |
-| 게시글 생성 | 화면이 의미 없는 `id = 0` 을 만들어 전달 | `create(title, content, writer)` — 화면은 id 를 다루지 않음 |
-| 게시글 수정 | 화면이 `RequestBoard` 를 새로 조립 | `board.copy(title, content)` |
-
+```bash
+./gradlew testDebugUnitTest
 ```
-변경 전   화면 ──────────────────────────> BoardService (Retrofit)
-변경 후   화면 ──> BoardRepository ──────> BoardService (Retrofit)
-                        │
-                   RequestBoard ↔ Board 변환
-```
-
-**얻은 것**
-
-| 항목 | 내용 |
-|---|---|
-| 화면의 책임 축소 | 화면은 Retrofit 도 통신 모델도 알지 못한다 |
-| 변경 범위 격리 | 서버 응답 형식이 바뀌어도 `BoardRepository` 만 고치면 된다 |
-| 다음 단계 준비 | ViewModel 이 `BoardRepository` 만 알면 되는 형태로 정리됨 (실제 주입은 Phase 5 에서) |
-
-서버 쪽 `kotlin-board-api` 가 `BoardEntity` 와 `BoardDto` 를 분리한 것과 같은 이유입니다.
-
-**동작 변경**
-
-없습니다. 순수 구조 변경이며, 화면 흐름과 요청 횟수는 Phase 1 과 동일합니다.
-에뮬레이터에서 목록 조회 · 단건 조회 · 생성 · 수정 · 삭제 5개 흐름이
-모두 이전과 같이 동작하는 것을 확인했습니다.
-
-### Phase 3 — ViewModel 과 화면 상태
-
-화면이 직접 들고 있던 상태를 `ViewModel` 로 옮기고,
-화면이 가질 수 있는 상태를 `sealed interface` 로 명시했습니다.
-
-**수정한 버그**
-
-| 증상 | 원인 | 해결 |
-|---|---|---|
-| 화면을 회전하면 목록이 사라지고 다시 불러옴 | 상태를 `remember` 로 들고 있어 액티비티가 다시 만들어지면 소실 | `ViewModel` 이 상태를 보관. 회전해도 살아남는다 |
-| 상세·수정 화면에서 회전하면 "불러오지 못했습니다" | 게시글 ID 를 `BoardApp` 이 `remember` 로 들고 있어 회전 시 0 이 됨 | `rememberSaveable` 로 변경 |
-| 등록 버튼을 연타하면 누른 횟수만큼 게시글이 생성됨 | 전송 중인지 아는 주체가 없었다 | `isSubmitting` 으로 전송 중 버튼을 비활성화 |
-| 수정 화면에서 조회에 실패한 뒤 저장하면 서버 500 | ID 가 0 인 채로 전송됨 | 조회에 성공해야만 저장 버튼이 활성화된다 |
-| 불러오는 중 · 글이 없음 · 실패가 모두 같은 빈 화면 | 성공한 데이터만 상태로 보관 | 상태를 나눠 각각 다르게 표시. 실패 시 「다시 시도」 제공 |
-| 화면을 벗어나도 통신 코루틴이 남음 | `MainScope()` 를 직접 생성 | `viewModelScope` 사용. 화면을 벗어나면 자동 취소 |
-
-**구조 변경**
-
-| 대상 | 변경 전 | 변경 후 |
-|---|---|---|
-| 상태 보관 | 화면의 `remember` | `ViewModel` |
-| 상태 표현 | 성공 데이터만 보관 | `Loading` / `Success` / `Error` 를 `sealed interface` 로 명시 |
-| 코루틴 | `MainScope()` 직접 생성 | `viewModelScope` |
-| 화면 구성 | 하나의 Composable 이 상태와 그리기를 겸함 | 상태를 연결하는 부분과 그리는 부분을 분리 |
-| Preview | 실제 서버를 호출 | 가짜 상태를 넘겨 렌더링 |
-| 화면 간 ID 전달 | `remember` | `rememberSaveable` |
-
-```
-변경 전   화면(상태 보관 + 그리기) ──> BoardRepository
-변경 후   화면(그리기) <── StateFlow ── ViewModel(상태 보관) ──> BoardRepository
-```
-
-**동작 변경**
-
-| 상황 | 변경 전 | 변경 후 |
-|---|---|---|
-| 목록 화면에서 회전 | 빈 화면이 되었다가 다시 불러옴 | 목록이 그대로 유지됨 |
-| 상세 화면에서 회전 | 조회 실패 (ID 소실) | 게시글이 그대로 유지됨 |
-| 작성 중 회전 | 입력하던 내용이 사라짐 | 입력 내용이 유지됨 |
-| 등록 버튼 연타 | 누른 횟수만큼 생성 | 첫 요청만 처리, 버튼은 "등록 중..." 으로 비활성화 |
-| 목록을 불러오는 동안 | 빈 화면 | 진행 표시 |
-| 게시글이 하나도 없을 때 | 빈 화면 | "아직 게시글이 없습니다." |
-| 서버 연결 실패 | 빈 화면 | 안내 문구와 「다시 시도」 버튼 |
-
-에뮬레이터에서 서버를 중지시켜 오류 상태와 재시도 복구까지 확인했고,
-목록 조회 · 단건 조회 · 생성 · 수정 · 삭제와 회전 시나리오를 모두 검증했습니다.
-
-**남은 것**
-
-게시글 ID 를 화면 간에 `rememberSaveable` 로 넘기는 방식은 임시 방편입니다.
-Navigation 인자로 전달하는 것이 정석이며 다음 단계에서 정리합니다.
-
-### 부가 정리 — 프로젝트 식별자
-
-프로젝트 생성 당시의 임시 이름과 오타가 그대로 남아 있어 정리했습니다.
-
-| 항목 | 변경 전 | 변경 후 |
-|---|---|---|
-| `applicationId` · `namespace` | `com.start.appForStuding` (Studying 오타) | `com.bonukoo.board` |
-| 소스 디렉터리 | `com/start/appForStuding` | `com/bonukoo/board` |
-| `rootProject.name` | `my_project` | `compose-board-app` |
-| 앱 표시 이름 | `my_project` | `게시판` |
-| 테마 | `Theme.My_project` · `My_projectTheme` | `Theme.Board` · `BoardTheme` |
-
-`applicationId` 는 스토어에서 앱을 식별하는 값이라 출시 후에는 바꿀 수 없습니다.
-미출시 상태인 지금 정리했습니다.
-
-### Phase 5 — 의존성 주입과 단위 테스트
-
-Phase 2·3 에서 계층은 나눴지만 `BoardRepository` 가 싱글턴 `object` 였고
-ViewModel 이 그것을 직접 불렀습니다. 구조는 나뉘었으나 **바꿔 끼울 수는 없는 상태**여서
-테스트에 실제 서버가 필요했습니다. 그 마지막 연결을 끊었습니다.
-
-**구조 변경**
-
-| 대상 | 변경 전 | 변경 후 |
-|---|---|---|
-| `BoardRepository` | 싱글턴 `object` | `interface` + `RemoteBoardRepository` 구현 |
-| ViewModel 의 의존성 | 싱글턴을 직접 호출 | 생성자로 `BoardRepository` 를 받음 |
-| ViewModel 생성 | `viewModel()` | `viewModelFactory` 로 구현을 주입 |
-| 조립 위치 | 흩어져 있음 | `AppContainer` 한 곳 |
-
-```
-화면 ──> ViewModel(BoardRepository) ──> RemoteBoardRepository ──> Retrofit
-                     ↑
-              테스트에서는 FakeBoardRepository
-```
-
-**테스트**
-
-`BoardRepository` 가 인터페이스가 되면서 서버 없이 ViewModel 을 검증할 수 있게 됐습니다.
 
 | 대상 | 개수 | 확인하는 것 |
 |---|---|---|
-| `BoardListViewModelTest` | 6 | 로딩 · 성공 · 빈 목록 · 실패 · 재시도 복구 · 재조회 시 깜빡임 없음 |
-| `CreateBoardViewModelTest` | 4 | 입력 반영 · 등록 성공 · **연타 시 1회만 전송** · 실패 후 재시도 |
-| `UpdateBoardViewModelTest` | 5 | 값 채움 · 조회 실패 시 저장 차단 · 제목·내용만 변경 · 재조회 시 입력 보존 |
+| `BoardListViewModelTest` | 6 | 로딩·성공·빈 목록·실패, 재시도 복구, 재조회 시 화면 깜빡임 없음 |
+| `CreateBoardViewModelTest` | 4 | 입력 반영, 등록 성공, 연타 시 1회만 전송, 실패 후 재시도 |
+| `UpdateBoardViewModelTest` | 5 | 값 채움, 조회 실패 시 저장 차단, 제목·내용만 변경, 재조회 시 입력 보존 |
 
-**테스트가 잡아낸 결함**
-
-연타 방지가 코루틴 디스패처에 의존하고 있었습니다.
-
-```kotlin
-// 변경 전 — 코루틴 안에서 잠근다
-if (isSubmitting) return
-viewModelScope.launch { isSubmitting = true; ... }
-
-// 변경 후 — 예약하기 전에 잠근다
-if (isSubmitting) return
-isSubmitting = true
-viewModelScope.launch { ... }
-```
-
-코루틴이 즉시 시작되는 환경에서는 우연히 동작했지만, 시작이 지연되면
-가드가 열린 채로 남아 연타가 그대로 통과합니다. 실기기에서는 드러나지 않았고
-단위 테스트에서 처음 잡혔습니다.
-
-**동작 변경**
-
-사용자가 보는 동작은 그대로입니다. 연타 방지만 환경에 관계없이 확실해졌습니다.
-
+`FakeBoardRepository`로 성공과 실패를 만들고 호출 횟수를 세므로 서버 없이 실행됩니다.
+`viewModelScope`가 `Dispatchers.Main`을 쓰기 때문에 `MainDispatcherRule`로 테스트 디스패처를 끼워 넣습니다.
 
 ---
+
+## 설계에서 신경 쓴 점
+
+- **화면과 상태의 분리** — 화면은 `UiState`를 받아 그리기만 합니다. 상태를 받는 부분과 그리는 부분을 나눠 두어 Preview가 서버 없이 네 가지 상태를 모두 렌더링합니다.
+- **모델 분리** — 통신 모델과 화면 모델을 나눠, 서버 응답 형식이 바뀌어도 변경 범위가 Repository 안에 머무릅니다.
+- **부수효과의 수명** — 조회는 `LaunchedEffect`, 통신은 `viewModelScope`에서 실행해 화면을 벗어나면 자동으로 취소됩니다.
+- **환경 의존 값의 외부화** — 서버 주소를 소스에서 분리해 네트워크가 바뀌어도 재빌드가 필요 없습니다.
+
+작업 과정에서 찾아 고친 버그와 리팩터링 기록은 [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md)에 정리해 두었습니다.
+
+---
+
+## 알려진 한계
+
+- 글 작성·수정 화면에서 키보드가 열리면 저장 버튼이 가려집니다.
+- 화면 간 게시글 ID 전달에 `rememberSaveable`을 쓰고 있습니다. Navigation 인자로 넘기는 것이 정석입니다.
+- 목록에 페이징이 없습니다.
