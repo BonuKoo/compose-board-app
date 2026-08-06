@@ -54,7 +54,7 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 | 구성 요소 | 책임 |
 |---|---|
 | `MainActivity` | 앱 진입점, Compose 트리 및 테마 설정 |
-| `Neo4App` | `NavHost` 구성, 화면 간 라우팅과 게시글 ID 전달 |
+| `BoardApp` | `NavHost` 구성, 화면 간 라우팅과 게시글 ID 전달 |
 | `BoardListScreen` | 게시글 목록 조회 및 표시 |
 | `ShowBoardScreen` | 게시글 단건 조회, 수정·삭제 메뉴 |
 | `CreateBoardScreen` | 게시글 작성 폼 |
@@ -133,7 +133,7 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 | 대상 | 변경 전 | 변경 후 |
 |---|---|---|
 | 데이터 로딩 | `SideEffect` / `DisposableEffect` 혼용 | `LaunchedEffect`로 통일 |
-| 화면 전환 | 각 화면의 콜백이 `navController.navigate()`를 그대로 호출 | `Neo4App.moveTo()` 한 곳으로 집약 |
+| 화면 전환 | 각 화면의 콜백이 `navController.navigate()`를 그대로 호출 | `BoardApp.moveTo()` 한 곳으로 집약 |
 | 서버 주소 | `RetrofitBuilder` 내 문자열 상수 | `local.properties` → `BuildConfig.SERVER_BASE_URL` |
 
 **동작 변경**
@@ -198,7 +198,7 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 | 증상 | 원인 | 해결 |
 |---|---|---|
 | 화면을 회전하면 목록이 사라지고 다시 불러옴 | 상태를 `remember` 로 들고 있어 액티비티가 다시 만들어지면 소실 | `ViewModel` 이 상태를 보관. 회전해도 살아남는다 |
-| 상세·수정 화면에서 회전하면 "불러오지 못했습니다" | 게시글 ID 를 `Neo4App` 이 `remember` 로 들고 있어 회전 시 0 이 됨 | `rememberSaveable` 로 변경 |
+| 상세·수정 화면에서 회전하면 "불러오지 못했습니다" | 게시글 ID 를 `BoardApp` 이 `remember` 로 들고 있어 회전 시 0 이 됨 | `rememberSaveable` 로 변경 |
 | 등록 버튼을 연타하면 누른 횟수만큼 게시글이 생성됨 | 전송 중인지 아는 주체가 없었다 | `isSubmitting` 으로 전송 중 버튼을 비활성화 |
 | 수정 화면에서 조회에 실패한 뒤 저장하면 서버 500 | ID 가 0 인 채로 전송됨 | 조회에 성공해야만 저장 버튼이 활성화된다 |
 | 불러오는 중 · 글이 없음 · 실패가 모두 같은 빈 화면 | 성공한 데이터만 상태로 보관 | 상태를 나눠 각각 다르게 표시. 실패 시 「다시 시도」 제공 |

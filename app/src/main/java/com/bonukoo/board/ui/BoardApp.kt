@@ -25,7 +25,7 @@ enum class Navigate(){
 }
 
 @Composable
-fun Neo4App(innerPadding: PaddingValues) {
+fun BoardApp(innerPadding: PaddingValues) {
     val navController = rememberNavController()
     // rememberSaveable : 화면 회전으로 액티비티가 다시 만들어져도 살아남는다.
     // remember 였을 때는 회전하면 id 가 0 이 되어 상세·수정 화면이 조회에 실패했다.
