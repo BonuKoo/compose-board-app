@@ -27,6 +27,18 @@ enum class Navigate(){
 fun Neo4App(innerPadding: PaddingValues) {
     val navController = rememberNavController()
     var id by remember { mutableIntStateOf(0) }
+
+    /**
+     * 이미 백스택에 있는 화면이면 새로 쌓지 않고 그 화면까지 되돌아간다.
+     * 전부 navigate 로만 이동하면 뒤로가기를 눌러도 스택이 계속 쌓여
+     * 삭제한 게시글의 상세 화면으로 되돌아가는 문제가 생긴다.
+     */
+    fun moveTo(route: String) {
+        if (!navController.popBackStack(route, inclusive = false)) {
+            navController.navigate(route)
+        }
+    }
+
 //    Scaffold()
         Box(modifier = Modifier.padding(innerPadding)) {
 
@@ -38,22 +50,22 @@ fun Neo4App(innerPadding: PaddingValues) {
                         if(inputId != null){
                             id = inputId
                         }
-                        navController.navigate(destination)
+                        moveTo(destination)
                     }
                 }
                 composable(route = Navigate.CREATE.name) {
                     CreateBoardScreen(){
-                        navController.navigate(it)
+                        moveTo(it)
                     }
                 }
                 composable(route = Navigate.READ.name) {
                     ShowBoardScreen(id = id){
-                        navController.navigate(it)
+                        moveTo(it)
                     }
                 }
                 composable(route = Navigate.UPDATE.name) {
                     UpdateBoardScreen (id = id){
-                        navController.navigate(it)
+                        moveTo(it)
                     }
                 }
             }
