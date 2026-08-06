@@ -95,16 +95,76 @@ Retrofit을 통해 REST API 서버와 통신합니다.
 
 | 항목 | 위치 |
 |---|---|
-| 서버 주소 | `RetrofitBuilder.getRetrofit()` 의 `baseUrl` |
+| 서버 주소 | `local.properties` · `server.base.url` |
 | 인터넷 권한 | `AndroidManifest.xml` · `android.permission.INTERNET` |
 | 평문 HTTP 허용 | `AndroidManifest.xml` · `usesCleartextTraffic="true"` |
 
 
 > **서버 주소 설정**
 > 에뮬레이터·실기기는 `localhost`를 인식하지 못합니다.
-> 서버가 실행 중인 PC의 **LAN IP**(예: `http://???.???.?.?:8080`)를
-> `baseUrl`에 지정하고, 서버 PC의 방화벽에서 8080 포트 인바운드를
-> 허용해야 합니다.
+> `local.properties`에 서버가 실행 중인 PC의 **LAN IP**를 지정하고,
+> 서버 PC의 방화벽에서 8080 포트 인바운드를 허용해야 합니다.
+> 이 파일은 버전 관리에서 제외되므로 개발 환경마다 값을 따로 둡니다.
+> 값이 없으면 에뮬레이터 기본 주소(`http://10.0.2.2:8080`)를 사용합니다.
+>
+> `server.base.url=http://???.???.?.?:8080`
+
+값은 빌드 시 `BuildConfig.SERVER_BASE_URL`로 주입되어 `RetrofitBuilder`가 읽습니다.
+
+
+---
+
+## 개선 이력
+
+코드 개선을 단계별로 진행합니다. 각 단계가 끝날 때마다 앱은 동작하는 상태를 유지합니다.
+
+### Phase 1 — 부수효과 API · 네비게이션 · 빌드 설정 (완료)
+
+**수정한 버그**
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 화면 진입 시 조회 요청이 2회 발생. 상세 화면은 더보기 메뉴를 여닫을 때마다 요청이 추가로 발생 | `SideEffect`는 재구성이 일어날 때마다 실행된다 | `LaunchedEffect`로 교체. 진입 시 한 번만 실행되고 화면을 벗어나면 자동 취소된다 |
+| 게시글을 삭제한 뒤 시스템 뒤로가기를 누르면 삭제된 글의 상세 화면으로 이동 (서버 500) | 뒤로가기까지 `navigate()`로 처리해 백스택에 화면이 계속 쌓였다 | 백스택에 이미 있는 경로면 `popBackStack`으로 되돌아가도록 변경 |
+| 게시글 수정 화면 상단에 "게시글 생성"이 표시됨 | 생성 화면을 복사하며 남은 흔적 | "게시글 수정"으로 수정 |
+| 더보기 메뉴가 의도한 위치에서 벗어나 열림 | `DropdownMenu`가 48dp 고정 크기인 `IconButton`의 content 슬롯 안에 있었다 | `Box`의 형제로 배치 |
+| 개발 PC의 LAN IP가 바뀌면 모든 요청이 실패하고, 앱을 다시 빌드해야 복구됨 | `baseUrl`이 소스에 하드코딩되어 있었다 | `local.properties` 값을 `BuildConfig`로 주입 |
+
+**구조 변경**
+
+| 대상 | 변경 전 | 변경 후 |
+|---|---|---|
+| 데이터 로딩 | `SideEffect` / `DisposableEffect` 혼용 | `LaunchedEffect`로 통일 |
+| 화면 전환 | 각 화면의 콜백이 `navController.navigate()`를 그대로 호출 | `Neo4App.moveTo()` 한 곳으로 집약 |
+| 서버 주소 | `RetrofitBuilder` 내 문자열 상수 | `local.properties` → `BuildConfig.SERVER_BASE_URL` |
+
+**동작 변경**
+
+| 상황 | 변경 전 | 변경 후 |
+|---|---|---|
+| 목록 화면 진입 | GET `/board` 2회 | 1회 |
+| 상세 화면에서 메뉴 열기 | 열 때마다 GET `/board/{id}` 추가 발생 | 요청 없음 |
+| 게시글 삭제 후 뒤로가기 | 삭제된 글의 상세 화면 (오류 표시) | 앱 종료 |
+| 수정 완료 후 상세 화면 복귀 | 새 화면을 쌓으며 재조회 | 백스택을 되감으며 재조회 (결과 동일, 스택은 정리됨) |
+
+조회는 `LaunchedEffect(id)`를 사용해 게시글 ID가 바뀌면 다시 수행합니다.
+백스택을 되감아 상세 화면으로 돌아올 때도 화면이 새로 구성되므로 수정된 내용이 반영됩니다.
+
+**의도적으로 남긴 것**
+
+| 항목 | 이유 |
+|---|---|
+| 버튼 핸들러의 `MainScope()` | Phase 3에서 `viewModelScope`로 대체되며 사라진다 |
+| 화면 회전 시 게시글 ID 소실 | Phase 3·4에서 구조적으로 해결한다 |
+
+### 다음 단계
+
+| Phase | 내용 |
+|---|---|
+| 2 | `BoardRepository` 추출, DTO와 도메인 모델 분리 |
+| 3 | ViewModel · UiState 도입 — 로딩·에러 상태 표현, 화면 회전 대응 |
+| 4 | 게시글 ID를 Navigation 인자로 전달 |
+| 5 | 의존성 주입과 ViewModel 단위 테스트 |
 
 
 ---
