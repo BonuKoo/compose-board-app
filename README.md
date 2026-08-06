@@ -37,47 +37,7 @@ Jetpack Compose로 만든 게시판 안드로이드 앱.
 
 ---
 
-## 기술 스택
-
-| 구분 | 사용 기술 |
-|---|---|
-| 언어 | Kotlin 2.2.10 |
-| UI | Jetpack Compose (BOM 2026.02.01), Material 3 |
-| 화면 전환 | Navigation Compose 2.9.2 |
-| 상태 관리 | ViewModel, StateFlow |
-| 네트워크 | Retrofit 3.0.0, Gson Converter 2.9.0 |
-| 비동기 | Kotlin Coroutines |
-| 테스트 | JUnit 4, kotlinx-coroutines-test |
-| 빌드 | Gradle 9.4.1, AGP 9.2.1 |
-| 지원 SDK | minSdk 24 / targetSdk 36 |
-
----
-
 ## 구조
-
-```
-ui/screens ──> ViewModel ──> BoardRepository ──> BoardService (Retrofit)
-                  │                 │
-             BoardListUiState   RequestBoard ↔ Board
-```
-
-화면은 그리는 일만 하고, 상태는 `ViewModel`이 보관합니다.
-`BoardRepository`는 인터페이스이므로 테스트에서는 가짜 구현으로 바꿔 끼웁니다.
-
-```
-com.bonukoo.board
-├── MainActivity.kt
-├── di/AppContainer.kt              앱이 쓸 구현을 조립
-├── domain/Board.kt                 화면용 모델
-├── data/
-│   ├── BoardRepository.kt          인터페이스
-│   └── RemoteBoardRepository.kt    Retrofit 구현
-├── server/                         Retrofit 정의와 통신 모델
-└── ui/
-    ├── BoardApp.kt                 NavHost 구성
-    ├── component/ foundation/ theme/
-    └── screens/                    화면 + ViewModel + UiState
-```
 
 | 구성 요소 | 책임 |
 |---|---|
@@ -86,16 +46,6 @@ com.bonukoo.board
 | `ShowBoardScreen` | 단건 조회, 수정·삭제 메뉴 |
 | `CreateBoardScreen` | 작성 폼 |
 | `UpdateBoardScreen` | 수정 폼 |
-
-화면 상태는 `sealed interface`로 표현합니다.
-
-```kotlin
-sealed interface BoardListUiState {
-    data object Loading : BoardListUiState
-    data class Success(val boards: List<Board>) : BoardListUiState
-    data class Error(val message: String) : BoardListUiState
-}
-```
 
 ---
 
@@ -129,7 +79,7 @@ sealed interface BoardListUiState {
 이 파일은 버전 관리에서 제외되므로 개발 환경마다 값을 따로 둡니다.
 
 ```properties
-server.base.url=http://192.168.0.10:8080
+server.base.url=http://000.000.0.00:8080 - 도메인 / 각 PC의 IP 입력
 ```
 
 값이 없으면 에뮬레이터 기본 주소 `http://10.0.2.2:8080`을 사용합니다.
@@ -142,18 +92,11 @@ server.base.url=http://192.168.0.10:8080
 
 ## 테스트
 
-```bash
-./gradlew testDebugUnitTest
-```
-
 | 대상 | 개수 | 확인하는 것 |
 |---|---|---|
 | `BoardListViewModelTest` | 6 | 로딩·성공·빈 목록·실패, 재시도 복구, 재조회 시 화면 깜빡임 없음 |
 | `CreateBoardViewModelTest` | 4 | 입력 반영, 등록 성공, 연타 시 1회만 전송, 실패 후 재시도 |
 | `UpdateBoardViewModelTest` | 5 | 값 채움, 조회 실패 시 저장 차단, 제목·내용만 변경, 재조회 시 입력 보존 |
-
-`FakeBoardRepository`로 성공과 실패를 만들고 호출 횟수를 세므로 서버 없이 실행됩니다.
-`viewModelScope`가 `Dispatchers.Main`을 쓰기 때문에 `MainDispatcherRule`로 테스트 디스패처를 끼워 넣습니다.
 
 ---
 
