@@ -68,6 +68,8 @@ dependencies {
     // StateFlow 를 화면 수명에 맞춰 수집하기 위한 collectAsStateWithLifecycle
     implementation(libs.androidx.lifecycle.runtime.compose)
     testImplementation(libs.junit)
+    // ViewModel 테스트에서 코루틴 디스패처를 제어하기 위해 사용
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
