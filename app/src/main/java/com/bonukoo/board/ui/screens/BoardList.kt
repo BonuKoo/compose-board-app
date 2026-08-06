@@ -84,7 +84,7 @@ private fun BoardListContent(
             ) {
                 Text(
                     modifier = Modifier,
-                    text = "Neo4의 게시판",
+                    text = "Bon's",
                     color = Black,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
