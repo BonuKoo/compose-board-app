@@ -1,8 +1,12 @@
 package com.bonukoo.board.ui.screens
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.bonukoo.board.data.BoardRepository
+import com.bonukoo.board.di.AppContainer
 import com.bonukoo.board.domain.Board
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +25,9 @@ sealed interface BoardDetailUiState {
  * 코루틴을 viewModelScope 에서 실행하므로 화면을 벗어나면 자동으로 취소된다.
  * 이전에는 MainScope() 를 직접 만들어 써서 화면을 떠나도 코루틴이 남았다.
  */
-class BoardDetailViewModel : ViewModel() {
+class BoardDetailViewModel(
+    private val repository: BoardRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<BoardDetailUiState>(BoardDetailUiState.Loading)
     val uiState: StateFlow<BoardDetailUiState> = _uiState.asStateFlow()
@@ -33,7 +39,7 @@ class BoardDetailViewModel : ViewModel() {
             }
 
             runCatching {
-                BoardRepository.getBoard(id)
+                repository.getBoard(id)
             }.onSuccess { board ->
                 _uiState.value = BoardDetailUiState.Success(board)
             }.onFailure { error ->
@@ -46,13 +52,19 @@ class BoardDetailViewModel : ViewModel() {
     fun delete(id: Int, onDeleted: () -> Unit, onFailed: () -> Unit) {
         viewModelScope.launch {
             runCatching {
-                BoardRepository.delete(id)
+                repository.delete(id)
             }.onSuccess {
                 onDeleted()
             }.onFailure { error ->
                 error.printStackTrace()
                 onFailed()
             }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer { BoardDetailViewModel(AppContainer.boardRepository) }
         }
     }
 }

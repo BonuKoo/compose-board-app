@@ -1,8 +1,12 @@
 package com.bonukoo.board.ui.screens
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.bonukoo.board.data.BoardRepository
+import com.bonukoo.board.di.AppContainer
 import com.bonukoo.board.domain.Board
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +31,9 @@ sealed interface BoardListUiState {
  * ViewModel 은 화면 회전으로 액티비티가 다시 만들어져도 살아남는다.
  * 덕분에 회전 시 데이터가 사라지지 않고, 화면은 그리기에만 집중할 수 있다.
  */
-class BoardListViewModel : ViewModel() {
+class BoardListViewModel(
+    private val repository: BoardRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<BoardListUiState>(BoardListUiState.Loading)
     val uiState: StateFlow<BoardListUiState> = _uiState.asStateFlow()
@@ -41,13 +47,20 @@ class BoardListViewModel : ViewModel() {
             }
 
             runCatching {
-                BoardRepository.getBoards()
+                repository.getBoards()
             }.onSuccess { boards ->
                 _uiState.value = BoardListUiState.Success(boards)
             }.onFailure { error ->
                 _uiState.value = BoardListUiState.Error("게시글을 불러오지 못했습니다.")
                 error.printStackTrace()
             }
+        }
+    }
+
+    companion object {
+        /** 화면에서 쓸 실제 구현을 끼워 넣는다. */
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer { BoardListViewModel(AppContainer.boardRepository) }
         }
     }
 }

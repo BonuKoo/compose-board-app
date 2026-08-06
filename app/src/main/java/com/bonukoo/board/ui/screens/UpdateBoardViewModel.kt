@@ -4,8 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.bonukoo.board.data.BoardRepository
+import com.bonukoo.board.di.AppContainer
 import com.bonukoo.board.domain.Board
 import kotlinx.coroutines.launch
 
@@ -16,7 +20,9 @@ import kotlinx.coroutines.launch
  * 조회에 실패하면 loadFailed 가 되어 저장 버튼을 막는다.
  * 이전에는 조회 실패 시 id 가 0 인 채로 전송되어 서버가 500 을 반환했다.
  */
-class UpdateBoardViewModel : ViewModel() {
+class UpdateBoardViewModel(
+    private val repository: BoardRepository
+) : ViewModel() {
 
     private var board: Board? = null
 
@@ -40,7 +46,7 @@ class UpdateBoardViewModel : ViewModel() {
 
         viewModelScope.launch {
             runCatching {
-                BoardRepository.getBoard(id)
+                repository.getBoard(id)
             }.onSuccess { loaded ->
                 board = loaded
                 title = loaded.title
@@ -56,11 +62,13 @@ class UpdateBoardViewModel : ViewModel() {
     fun submit(onUpdated: () -> Unit, onFailed: () -> Unit) {
         val current = board ?: return
         if (isSubmitting) return
+        // 코루틴 안에서 켜면 코루틴이 실제로 시작되기 전까지 가드가 열려 있어
+        // 연타가 그대로 통과한다. 실행을 예약하기 전에 잠근다.
+        isSubmitting = true
 
         viewModelScope.launch {
-            isSubmitting = true
             runCatching {
-                BoardRepository.update(current.copy(title = title, content = content))
+                repository.update(current.copy(title = title, content = content))
             }.onSuccess {
                 onUpdated()
             }.onFailure { error ->
@@ -68,6 +76,12 @@ class UpdateBoardViewModel : ViewModel() {
                 error.printStackTrace()
                 onFailed()
             }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer { UpdateBoardViewModel(AppContainer.boardRepository) }
         }
     }
 }

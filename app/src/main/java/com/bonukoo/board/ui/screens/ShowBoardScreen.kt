@@ -47,7 +47,7 @@ import com.bonukoo.board.ui.theme.Purple40
 @Composable
 fun ShowBoardScreen(
     id: Int,
-    viewModel: BoardDetailViewModel = viewModel(),
+    viewModel: BoardDetailViewModel = viewModel(factory = BoardDetailViewModel.Factory),
     onMove: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -31,7 +31,7 @@ import com.bonukoo.board.ui.theme.White
 
 @Composable
 fun CreateBoardScreen(
-    viewModel: CreateBoardViewModel = viewModel(),
+    viewModel: CreateBoardViewModel = viewModel(factory = CreateBoardViewModel.Factory),
     onMove: (String) -> Unit
 ) {
     val context = LocalContext.current

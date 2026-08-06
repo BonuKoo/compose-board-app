@@ -41,7 +41,7 @@ import com.bonukoo.board.ui.theme.White
  */
 @Composable
 fun BoardListScreen(
-    viewModel: BoardListViewModel = viewModel(),
+    viewModel: BoardListViewModel = viewModel(factory = BoardListViewModel.Factory),
     onMove: (String, id: Int?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
