@@ -16,10 +16,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,44 +23,58 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-import com.start.appForStuding.data.BoardRepository
-import com.start.appForStuding.domain.Board
 import com.start.appForStuding.ui.Navigate
 import com.start.appForStuding.ui.foundation.icon.BackIcon
 import com.start.appForStuding.ui.theme.Gray
 import com.start.appForStuding.ui.theme.Purple40
 import com.start.appForStuding.ui.theme.White
 
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-
-
 @Composable
 fun UpdateBoardScreen(
     id: Int,
+    viewModel: UpdateBoardViewModel = viewModel(),
     onMove: (String) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
-    var board by remember { mutableStateOf(Board(0, "", "", "")) }
     val context = LocalContext.current
 
-    // LaunchedEffect : 코루틴을 실행하고 화면을 벗어나면 자동으로 취소한다.
-    // DisposableEffect 는 직접 정리해야 하는 리소스를 다룰 때 쓴다.
     LaunchedEffect(id) {
-        runCatching {
-            BoardRepository.getBoard(id)
-        }.onSuccess { result ->
-            board = result
-            title = result.title
-            content = result.content
-        }.onFailure { error ->
-            board = Board(0, "값을 못 불러왔습니다.", "", "")
-            error.printStackTrace()
-        }
+        viewModel.load(id)
     }
 
+    UpdateBoardContent(
+        title = viewModel.title,
+        content = viewModel.content,
+        canSubmit = viewModel.canSubmit,
+        isSubmitting = viewModel.isSubmitting,
+        loadFailed = viewModel.loadFailed,
+        onTitleChange = viewModel::onTitleChange,
+        onContentChange = viewModel::onContentChange,
+        onSubmit = {
+            viewModel.submit(
+                onUpdated = { onMove(Navigate.READ.name) },
+                onFailed = {
+                    Toast.makeText(context, "게시글 갱신에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                }
+            )
+        },
+        onBack = { onMove(Navigate.READ.name) }
+    )
+}
+
+@Composable
+private fun UpdateBoardContent(
+    title: String,
+    content: String,
+    canSubmit: Boolean,
+    isSubmitting: Boolean,
+    loadFailed: Boolean,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onBack: () -> Unit
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier,
@@ -85,12 +95,20 @@ fun UpdateBoardScreen(
 
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterStart),
-                    onClick = {
-                        onMove(Navigate.READ.name)
-                    }
+                    onClick = onBack
                 ) {
                     BackIcon(descriptor = "뒤로가기")
                 }
+            }
+
+            if (loadFailed) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 30.dp),
+                    text = "게시글을 불러오지 못했습니다.",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Gray
+                )
             }
 
             OutlinedTextField(
@@ -98,7 +116,7 @@ fun UpdateBoardScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 30.dp),
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = onTitleChange,
                 label = { Text(text = "제목") },
                 singleLine = true
             )
@@ -108,7 +126,7 @@ fun UpdateBoardScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 30.dp),
                 value = content,
-                onValueChange = { content = it },
+                onValueChange = onContentChange,
                 label = { Text(text = "내용") },
                 singleLine = true
             )
@@ -118,20 +136,10 @@ fun UpdateBoardScreen(
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 30.dp, vertical = 40.dp),
-            onClick = {
-                // 조회해 온 게시글에서 제목과 내용만 바꿔 보낸다.
-                val updatedBoard = board.copy(title = title, content = content)
-                MainScope().launch {
-                    runCatching {
-                        BoardRepository.update(updatedBoard)
-                    }.onSuccess { _ ->
-                        onMove(Navigate.READ.name)
-                    }.onFailure { error ->
-                        Toast.makeText(context, "게시글 갱신에 실패했습니다.", Toast.LENGTH_SHORT).show()
-                        error.printStackTrace()
-                    }
-                }
-            },
+            // 조회에 성공해야만 저장할 수 있다.
+            // 이전에는 조회 실패 시 id 가 0 인 채로 전송되어 서버가 500 을 반환했다.
+            enabled = canSubmit,
+            onClick = onSubmit,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Purple40,
                 contentColor = White,
@@ -142,7 +150,7 @@ fun UpdateBoardScreen(
         ) {
             Text(
                 modifier = Modifier,
-                text = "게시글 갱신",
+                text = if (isSubmitting) "갱신 중..." else "게시글 갱신",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = White
@@ -152,7 +160,21 @@ fun UpdateBoardScreen(
 }
 
 @Composable
-@Preview(showBackground = true)
-fun UpdateBoardScreenPreview() {
-    UpdateBoardScreen(id = 1) { }
+@Preview(showBackground = true, name = "수정")
+private fun UpdateBoardPreview() {
+    UpdateBoardContent(
+        title = "첫 게시글", content = "내용 A",
+        canSubmit = true, isSubmitting = false, loadFailed = false,
+        onTitleChange = {}, onContentChange = {}, onSubmit = {}, onBack = {}
+    )
+}
+
+@Composable
+@Preview(showBackground = true, name = "조회 실패")
+private fun UpdateBoardLoadFailedPreview() {
+    UpdateBoardContent(
+        title = "", content = "",
+        canSubmit = false, isSubmitting = false, loadFailed = true,
+        onTitleChange = {}, onContentChange = {}, onSubmit = {}, onBack = {}
+    )
 }
