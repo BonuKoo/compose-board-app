@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "my_project"
+rootProject.name = "compose-board-app"
 include(":app")

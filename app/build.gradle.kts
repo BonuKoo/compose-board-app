@@ -13,7 +13,7 @@ val serverBaseUrl: String = Properties().apply {
 }.getProperty("server.base.url") ?: "http://10.0.2.2:8080" // 에뮬레이터에서 호스트 PC를 가리키는 기본 주소
 
 android {
-    namespace = "com.start.appForStuding"
+    namespace = "com.bonukoo.board"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.start.appForStuding"
+        applicationId = "com.bonukoo.board"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
