@@ -11,6 +11,29 @@ Kotlin + Spring Boot API 서버([kotlin-board-api](#연동-프로젝트))와 연
 
 ---
 
+## 화면
+
+| 목록 | 상세 | 수정 |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/list.png" width="240"> | <img src="docs/screenshots/detail.png" width="240"> | <img src="docs/screenshots/edit.png" width="240"> |
+
+### 상태 처리
+
+불러오는 중 · 게시글 없음 · 요청 실패를 각각 구분해 표시합니다.
+실패했을 때는 「다시 시도」로 복구할 수 있습니다.
+
+| 불러오는 중 | 게시글 없음 | 요청 실패 |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/list-loading.png" width="240"> | <img src="docs/screenshots/list-empty.png" width="240"> | <img src="docs/screenshots/list-error.png" width="240"> |
+
+### 동작
+
+게시글을 삭제하면 목록으로 돌아오면서 자동으로 갱신됩니다.
+
+<img src="docs/screenshots/flow.gif" width="260">
+
+---
+
 ## 프로젝트 소개
 
 게시글의 생성·조회·수정·삭제(CRUD)를 제공하는 안드로이드 클라이언트입니다.
